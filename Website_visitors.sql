@@ -26,7 +26,7 @@ VALUES (1, '2024-01-01 09:04:00', '2024-01-02 12:20:00'),
        (3, '2024-01-01 21:04:00', '2024-01-02 12:20:00');
 
 
-SELECT 66;
+SELECT 66333;
 
 
 -- Generate and insert more than 100 rows of sample data into the website_visitors table
