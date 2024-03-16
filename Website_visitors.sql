@@ -26,6 +26,8 @@ VALUES (1, '2024-01-01 09:04:00', '2024-01-02 12:20:00'),
        (3, '2024-01-01 21:04:00', '2024-01-02 12:20:00');
 
 
+SELECT 66;
+
 
 -- Generate and insert more than 100 rows of sample data into the website_visitors table
 INSERT INTO website_visitors (visitor_id, login_timestamp, logout_timestamp)
