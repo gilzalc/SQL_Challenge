@@ -1,0 +1,52 @@
+# Default ignored files
+/shelf/
+/workspace.xml
+# Datasource local storage ignored files
+/dataSources/
+/dataSources.local.xml
+
+
+# JetBrains IDEs
+.idea/
+
+# Compiled Python files
+*.pyc
+
+# Compiled Java files
+*.class
+
+# Compiled JavaScript files
+*.js
+
+# Compiled TypeScript files
+*.ts
+
+# Compiled CSS files
+*.css
+
+# Compiled HTML files
+*.html
+
+# Compiled SASS files
+*.scss
+
+# Compiled LESS files
+*.less
+
+# Compiled CoffeeScript files
+*.coffee
+
+# Maven build directory
+target/
+
+# Gradle build directory
+build/
+
+# Node.js dependency directory
+node_modules/
+
+# Compiled binaries or DLL files
+bin/
+binaries/
+dist/
+out/
