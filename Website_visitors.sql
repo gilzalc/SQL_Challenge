@@ -25,10 +25,6 @@ VALUES (1, '2024-01-01 09:04:00', '2024-01-02 12:20:00'),
        (1, '2024-01-01 21:04:00', '2024-01-02 12:20:00'),
        (3, '2024-01-01 21:04:00', '2024-01-02 12:20:00');
 
-
-SELECT 66333;
-
-
 -- Generate and insert more than 100 rows of sample data into the website_visitors table
 INSERT INTO website_visitors (visitor_id, login_timestamp, logout_timestamp)
 SELECT
@@ -40,7 +36,7 @@ SELECT
     '2024-01-01'::timestamp + (floor(random() * 30) || ' days')::interval + (floor(random() * 24) || ' hours')::interval AS logout_timestamp
 FROM
     -- Generate 100 rows of data using the GENERATE_SERIES function
-    GENERATE_SERIES(1, 100) AS gs(row);
+    GENERATE_SERIES(1, 240) AS gs(row);
 
 
 
@@ -56,9 +52,8 @@ FROM website_visitors
 GROUP BY visitor_id
 HAVING COUNT(DISTINCT DATE(login_timestamp)) = (SELECT COUNT(*) FROM AllDays);
 
-
 -- version if all days in the range of dates
-SELECT visitor_id
+EXPLAIN SELECT visitor_id
 FROM website_visitors
 GROUP BY visitor_id
 
@@ -134,9 +129,9 @@ SELECT visit_date                 AS DAY,
 FROM combined_visits
 GROUP BY visit_date
 ORDER BY DAY;
-
 -- Late-Night Visitors:
 -- Identify visitors who logged in between 12:00 AM and 6:00 AM.
+
 
 
 -- Concurrent Visitors:
@@ -151,17 +146,11 @@ ORDER BY DAY;
 -- Find visitors who logged in on consecutive days.
 
 
--- Session Gaps:
--- Identify instances where a visitor has a gap of more than 1 hour between consecutive sessions.
-
-
 -- Inactive Visitors:
 -- List visitors who did not log in for more than 24 hours.
 
--- day 3:
 
-
--- Dates Sandbox
+-- Dates Sandbox:
 SELECT (date '2024-03-16' - date '2024-03-15');
 
 SELECT AGE('2017-11-26', '2017-08-25');
@@ -172,11 +161,13 @@ SELECT date(date '2017-06-15' + INTERVAL '2 days') AS result_date;
 SELECT date '2017-06-15' + 2 AS result_date;
 SELECT DATE_TRUNC('year', '2017-08-26'::timestamp + INTERVAL '100 years') AS datediff_result;
 
-SELECT '2017-06-15'::date;
 SELECT DATE(DATE '2024-01-30' + INTERVAL '2 years 4 months') AS result_date; -- 2017-06-17
 SELECT DATE_PART('Month', date '2024-03-15');
+SELECT 10/4.0;
 
 SELECT 10 / '10';
-SELECT LENGTH(596::varchar);
+SELECT length((596.0/433333)::varchar);
+
+SELECT * from pg_stats WHERE tablename='website_visitors';
 
 
