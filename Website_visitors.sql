@@ -6,9 +6,10 @@ CREATE TABLE website_visitors
     logout_timestamp TIMESTAMP
 );
 
+TRUNCATE TABLE website_visitors;
+
 INSERT INTO website_visitors
 
-VALUES (4, '2024-01-01 09:04:00', '2024-01-03 12:20:00');
 VALUES (1, '2024-01-01 09:04:00', '2024-01-02 12:20:00'),
        (1, '2024-01-02 07:37:00', '2024-01-02 08:16:00'),
        (1, '2024-01-03 00:10:00', '2024-01-03 07:44:00'),
@@ -23,21 +24,23 @@ VALUES (1, '2024-01-01 09:04:00', '2024-01-02 12:20:00'),
        (3, '2024-01-03 02:13:00', '2024-01-03 11:49:00'),
        (3, '2024-01-03 00:21:00', '2024-01-03 08:37:00'),
        (1, '2024-01-01 21:04:00', '2024-01-02 12:20:00'),
-       (3, '2024-01-01 21:04:00', '2024-01-02 12:20:00');
+       (3, '2024-01-01 21:04:00', '2024-01-02 12:20:00'),
+       (4, '2024-01-01 09:04:00', '2024-01-03 12:20:00');
 
 -- Generate and insert more than 100 rows of sample data into the website_visitors table
 INSERT INTO website_visitors (visitor_id, login_timestamp, logout_timestamp)
 SELECT
     -- Generate visitor IDs ranging from 1 to 20
-    floor(random() * 20) + 1 AS visitor_id,
+    FLOOR(RANDOM() * 20) + 1                     AS visitor_id,
     -- Generate random login timestamps within a range of 30 days
-    '2024-01-01'::timestamp + (floor(random() * 30) || ' days')::interval AS login_timestamp,
+    '2024-01-01'::timestamp + (FLOOR(RANDOM() * 30) || ' days')::interval +
+    (FLOOR(RANDOM() * 24) || ' hours')::interval AS login_timestamp,
     -- Generate random logout timestamps within a range of 1 to 24 hours after login
-    '2024-01-01'::timestamp + (floor(random() * 30) || ' days')::interval + (floor(random() * 24) || ' hours')::interval AS logout_timestamp
+    '2024-01-01'::timestamp + (FLOOR(RANDOM() * 30) || ' days')::interval +
+    (FLOOR(RANDOM() * 24) || ' hours')::interval AS logout_timestamp
 FROM
     -- Generate 100 rows of data using the GENERATE_SERIES function
-    GENERATE_SERIES(1, 240) AS gs(row);
-
+    GENERATE_SERIES(1, 12) AS gs(row);
 
 
 -- version if only days appear in table
@@ -53,7 +56,8 @@ GROUP BY visitor_id
 HAVING COUNT(DISTINCT DATE(login_timestamp)) = (SELECT COUNT(*) FROM AllDays);
 
 -- version if all days in the range of dates
-EXPLAIN SELECT visitor_id
+EXPLAIN
+SELECT visitor_id
 FROM website_visitors
 GROUP BY visitor_id
 
@@ -67,7 +71,7 @@ HAVING COUNT(DISTINCT DATE(login_timestamp)) =
 SELECT COUNT(DISTINCT (visitor_id))
 FROM website_visitors AS total_visitors;
 
--- Average Session Duration:
+-- Average Session Duration (in seconds):
 -- Calculate the average session duration for all visitors (combined).
 SELECT ROUND(AVG(EXTRACT(EPOCH FROM logout_timestamp - login_timestamp)), 2) AS total_seconds
 FROM website_visitors;
@@ -100,7 +104,8 @@ GROUP BY DATE(stamp)
 ORDER BY DATE(stamp);
 
 -- What If sessions can be more than 24 hours?
-WITH RECURSIVE visit_dates AS (
+WITH RECURSIVE
+    visit_dates AS (
         -- Anchor Member: Select initial session data and convert timestamps to dates
         SELECT visitor_id,
                DATE(login_timestamp)  AS visit_date,
@@ -130,20 +135,75 @@ FROM combined_visits
 GROUP BY visit_date
 ORDER BY DAY;
 -- Late-Night Visitors:
--- Identify visitors who logged in between 12:00 AM and 6:00 AM.
+-- Identify visitors who logged in between 12:00 AM and 6:30 AM.
+SELECT DISTINCT visitor_id
+FROM website_visitors
+WHERE EXTRACT(HOUR FROM login_timestamp) < 6
+   OR (EXTRACT(HOUR FROM login_timestamp) = 6 AND EXTRACT(MINUTE FROM login_timestamp) <= 30);
 
-
+-- Other version:
+SELECT DISTINCT visitor_id
+FROM website_visitors
+WHERE login_timestamp::time < '06:30';
 
 -- Concurrent Visitors:
 -- Determine the maximum number of simultaneous visitors at any given timestamp.
+WITH visitor_activity AS (SELECT login_timestamp AS timestamp, 1 AS activity
+                          FROM website_visitors
+                          UNION ALL
+                          SELECT logout_timestamp AS timestamp, -1 AS activity
+                          FROM website_visitors
+                          ORDER BY timestamp),
+
+     activity_counts AS (SELECT timestamp, SUM(activity) AS timestamp_delta
+                         FROM visitor_activity
+                         GROUP BY timestamp
+                         ORDER BY timestamp),
+
+     total_activity AS (SELECT *, SUM(timestamp_delta) OVER (ORDER BY timestamp) AS total_visitors
+                        FROM activity_counts
+                        ORDER BY timestamp)
+
+SELECT 'The time when our site was most busy was between: ' ||
+       timestamp ||
+       ' and ' ||
+       next_stamp AS busy_period
+FROM (SELECT timestamp,
+             LEAD(timestamp) OVER (ORDER BY timestamp)  AS next_stamp,
+             RANK() OVER (ORDER BY total_visitors DESC) AS rank
+      FROM total_activity) r
+WHERE rank = 1;
 
 
 -- Short Sessions:
 -- List the visitor IDs and durations of sessions lasting less than 30 minutes.
+SELECT DISTINCT visitor_id
+FROM website_visitors
+WHERE EXTRACT(EPOCH FROM (logout_timestamp) - (login_timestamp)) < 1800;
+-- 30 minutes = 1800 seconds
 
 
 -- Visitor Patterns:
 -- Find visitors who logged in on consecutive days.
+SELECT DISTINCT visitor_id
+FROM website_visitors wv
+WHERE EXISTS(SELECT *
+             FROM website_visitors wv2
+             WHERE wv.visitor_id = wv2.visitor_id
+               AND date(wv.login_timestamp)
+                 = (date(wv2.login_timestamp) + 1));
+
+SELECT DISTINCT wv1.visitor_id
+FROM website_visitors wv1
+         INNER JOIN website_visitors wv2 ON wv1.visitor_id = wv2.visitor_id
+    AND DATE(wv1.login_timestamp) = DATE(wv2.login_timestamp) - 1;
+
+SELECT DISTINCT visitor_id
+FROM (SELECT visitor_id,
+             DATE(login_timestamp)                                                              AS login_date,
+             LAG(DATE(login_timestamp)) OVER (PARTITION BY visitor_id ORDER BY login_timestamp) AS prev_login_date
+      FROM website_visitors) AS sub
+WHERE prev_login_date = login_date - 1;
 
 
 -- Inactive Visitors:
@@ -151,23 +211,27 @@ ORDER BY DAY;
 
 
 -- Dates Sandbox:
-SELECT (date '2024-03-16' - date '2024-03-15');
+-- EXTRACT:
+SELECT EXTRACT(MINUTES FROM timestamp '2024-03-16 12:44:00') BETWEEN 0 AND 6;
+SELECT EXTRACT(MONTH FROM timestamp '2024-03-15') AS month_created;
+SELECT EXTRACT(MONTH FROM date '2024-03-15') AS month_created;
+-- explicit casting
+SELECT (login_timestamp::time)
+FROM website_visitors;
 
-SELECT AGE('2017-11-26', '2017-08-25');
-SELECT (date '2017-11-26' - date '2035-11-01');
 
-SELECT ('2017-06-15'::date + '10 days'::interval)::date AS result_date;
-SELECT date(date '2017-06-15' + INTERVAL '2 days') AS result_date;
+-- Interval
+SELECT (timestamp '2024-03-16' - timestamp '2024-03-15'); -- returns INTERVAL
+SELECT ('2017-06-15'::date + ' 10 days '::INTERVAL)::date AS result_date;
+SELECT (date '2017-06-15' + INTERVAL ' 2 days ') AS result_date;
 SELECT date '2017-06-15' + 2 AS result_date;
-SELECT DATE_TRUNC('year', '2017-08-26'::timestamp + INTERVAL '100 years') AS datediff_result;
+SELECT DATE_TRUNC('year', '2017-08-26'::timestamp + INTERVAL ' 100 years ') AS datediff_result;
 
-SELECT DATE(DATE '2024-01-30' + INTERVAL '2 years 4 months') AS result_date; -- 2017-06-17
-SELECT DATE_PART('Month', date '2024-03-15');
-SELECT 10/4.0;
-
-SELECT 10 / '10';
-SELECT length((596.0/433333)::varchar);
-
-SELECT * from pg_stats WHERE tablename='website_visitors';
+SELECT DATE(DATE '2024 - 01 - 30 ' + INTERVAL ' 2 years 4 months ') AS result_date; -- 2017-06-17
 
 
+SELECT LENGTH((596.0 / 433333)::varchar);
+
+SELECT *
+FROM pg_stats
+WHERE tablename = ' website_visitors ';
