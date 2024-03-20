@@ -18,6 +18,8 @@
 -- insert into employees (full_name, department_name) values ('Linc Blasio', 'Human Resources');
 -- insert into employees (full_name, department_name) values ('Gray Moakes', 'Business Development');
 -- insert into employees (full_name, department_name) values ('Anthiathia Bruckental', 'Business Development');
+INSERT INTO employees (full_name, department_name)
+VALUES ('Gray John', 'Business Development');
 
 -- Employee with the longest name
 SELECT employee_id, LENGTH(full_name) AS len
@@ -48,7 +50,7 @@ ORDER BY RN;
 DO
 $$
     DECLARE
-        sql_query TEXT;
+        sql_query  TEXT;
         dept_names TEXT[];
         dep_name   TEXT; -- Add data type declaration for the loop variable
 
@@ -92,5 +94,35 @@ $$ LANGUAGE PLPGSQL;
 -- Now query it to get the results
 SELECT *
 FROM TEMP_TABLE;
+
+
+-- Identify employees with duplicate full names.
+SELECT full_name,
+       COUNT(*) AS duplicate_count
+FROM employees
+GROUP BY full_name
+HAVING COUNT(*) > 1;
+
+
+-- Query pairs of employees with same first name but different last name (assuming no middle names)
+SELECT e1.employee_id || ' from ' || e1.department_name AS first_emp,
+       e2.employee_id || ' from ' || e2.department_name AS second_emp
+FROM employees e1
+         INNER JOIN employees e2
+                    ON e1.employee_id < e2.employee_id
+WHERE SPLIT_PART(e1.full_name, ' ', 1) = SPLIT_PART(e2.full_name, ' ', 1)
+  AND SPLIT_PART(e1.full_name, ' ', 2) <> SPLIT_PART(e2.full_name, ' ', 2);
+
+-- with middle names: Functions SUBSTRING,SPLIT_PART,LENGTH
+SELECT e1.employee_id || ' from ' || e1.department_name AS first_emp,
+       e2.employee_id || ' from ' || e2.department_name AS second_emp
+FROM employees e1
+         INNER JOIN employees e2
+                    ON e1.employee_id < e2.employee_id
+WHERE SPLIT_PART(e1.full_name, ' ', 1) LIKE SPLIT_PART(e2.full_name, ' ', 1)
+
+  AND SUBSTRING(e1.full_name, LENGTH(SPLIT_PART(e1.full_name, ' ', 1)) + 2) <>
+      SUBSTRING(e2.full_name, LENGTH(SPLIT_PART(e2.full_name, ' ', 1)) + 2);
+
 
 

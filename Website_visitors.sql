@@ -6,7 +6,6 @@ CREATE TABLE website_visitors
     logout_timestamp TIMESTAMP
 );
 
-TRUNCATE TABLE website_visitors;
 
 INSERT INTO website_visitors
 
@@ -185,6 +184,13 @@ WHERE EXTRACT(EPOCH FROM (logout_timestamp) - (login_timestamp)) < 1800;
 
 -- Visitor Patterns:
 -- Find visitors who logged in on consecutive days.
+-- #1
+SELECT DISTINCT wv1.visitor_id
+FROM website_visitors wv1
+         INNER JOIN website_visitors wv2 ON wv1.visitor_id = wv2.visitor_id
+    AND DATE(wv1.login_timestamp) = DATE(wv2.login_timestamp) - 1;
+
+-- #2
 SELECT DISTINCT visitor_id
 FROM website_visitors wv
 WHERE EXISTS(SELECT *
@@ -193,22 +199,22 @@ WHERE EXISTS(SELECT *
                AND date(wv.login_timestamp)
                  = (date(wv2.login_timestamp) + 1));
 
-SELECT DISTINCT wv1.visitor_id
-FROM website_visitors wv1
-         INNER JOIN website_visitors wv2 ON wv1.visitor_id = wv2.visitor_id
-    AND DATE(wv1.login_timestamp) = DATE(wv2.login_timestamp) - 1;
-
 SELECT DISTINCT visitor_id
 FROM (SELECT visitor_id,
-             DATE(login_timestamp)                                                              AS login_date,
-             LAG(DATE(login_timestamp)) OVER (PARTITION BY visitor_id ORDER BY login_timestamp) AS prev_login_date
-      FROM website_visitors) AS sub
+             DATE(login_timestamp)
+                 AS login_date,
+             LAG(DATE(login_timestamp)) OVER (PARTITION BY visitor_id ORDER BY login_timestamp)
+                 AS prev_login_date
+      FROM website_visitors) help_table
 WHERE prev_login_date = login_date - 1;
 
 
 -- Inactive Visitors:
 -- List visitors who did not log in for more than 24 hours.
-
+SELECT DISTINCT visitor_id
+FROM website_visitors
+GROUP BY visitor_id
+HAVING (MAX(login_timestamp) + INTERVAL '1 day') < CURRENT_TIMESTAMP;
 
 -- Dates Sandbox:
 -- EXTRACT:
@@ -228,10 +234,14 @@ SELECT date '2017-06-15' + 2 AS result_date;
 SELECT DATE_TRUNC('year', '2017-08-26'::timestamp + INTERVAL ' 100 years ') AS datediff_result;
 
 SELECT DATE(DATE '2024 - 01 - 30 ' + INTERVAL ' 2 years 4 months ') AS result_date; -- 2017-06-17
-
-
+SELECT CURRENT_TIMESTAMP - INTERVAL '1 day';
 SELECT LENGTH((596.0 / 433333)::varchar);
+SELECT timestamp '2024-03-16 00:00:10' + INTERVAL '1 day';
+SELECT AGE(timestamp '2024-03-16 00:00:10', timestamp '2024-03-16 00:00:25');
+SELECT
 
-SELECT *
 FROM pg_stats
-WHERE tablename = ' website_visitors ';
+WHERE tablename = 'website_visitors';
+
+-- STRING functions:
+SELECT SPLIT_PART('CARMEN SANDIEGO', ' ', 2);

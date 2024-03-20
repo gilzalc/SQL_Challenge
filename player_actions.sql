@@ -35,7 +35,7 @@ FROM (SELECT player_id,
       GROUP BY player_id) AS ranked_players
 WHERE rank = 1;
 
--- LAG() version:
+-- Second approach- LAG() version:
 WITH lag_table AS (SELECT *,
                           LAG(player_id, 1, 0) OVER (ORDER BY action_id) AS prev_player_id
                    FROM player_actions),
@@ -48,7 +48,8 @@ WITH lag_table AS (SELECT *,
      final_TBL AS (SELECT *, RANK() OVER (PARTITION BY player_id, flag ORDER BY action_id) expected_result
                    FROM consecutive_actions
                    ORDER BY action_id)
-SELECT player_id, MAX(expected_result)
+SELECT player_id, MAX(expected_result) as maximum_succesive
 FROM final_TBL
 GROUP BY player_id
 HAVING MAX(expected_result) = (SELECT MAX(expected_result) FROM final_TBL);
+
