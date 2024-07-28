@@ -216,32 +216,3 @@ FROM website_visitors
 GROUP BY visitor_id
 HAVING (MAX(login_timestamp) + INTERVAL '1 day') < CURRENT_TIMESTAMP;
 
--- Dates Sandbox:
--- EXTRACT:
-SELECT EXTRACT(MINUTES FROM timestamp '2024-03-16 12:44:00') BETWEEN 0 AND 6;
-SELECT EXTRACT(MONTH FROM timestamp '2024-03-15') AS month_created;
-SELECT EXTRACT(MONTH FROM date '2024-03-15') AS month_created;
--- explicit casting
-SELECT (login_timestamp::time)
-FROM website_visitors;
-
-
--- Interval
-SELECT (timestamp '2024-03-16' - timestamp '2024-03-15'); -- returns INTERVAL
-SELECT ('2017-06-15'::date + ' 10 days '::INTERVAL)::date AS result_date;
-SELECT (date '2017-06-15' + INTERVAL ' 2 days ') AS result_date;
-SELECT date '2017-06-15' + 2 AS result_date;
-SELECT DATE_TRUNC('year', '2017-08-26'::timestamp + INTERVAL ' 100 years ') AS datediff_result;
-
-SELECT DATE(DATE '2024 - 01 - 30 ' + INTERVAL ' 2 years 4 months ') AS result_date; -- 2017-06-17
-SELECT CURRENT_TIMESTAMP - INTERVAL '1 day';
-SELECT LENGTH((596.0 / 433333)::varchar);
-SELECT timestamp '2024-03-16 00:00:10' + INTERVAL '1 day';
-SELECT AGE(timestamp '2024-03-16 00:00:10', timestamp '2024-03-16 00:00:25');
-SELECT
-
-FROM pg_stats
-WHERE tablename = 'website_visitors';
-
--- STRING functions:
-SELECT SPLIT_PART('CARMEN SANDIEGO', ' ', 2);

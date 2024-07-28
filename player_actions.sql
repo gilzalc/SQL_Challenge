@@ -19,6 +19,7 @@
 -- -- Query to find player with most successive actions - First approach Row_number()
 --
 --
+
 WITH sequence_number AS (SELECT *,
                                 ROW_NUMBER() OVER (ORDER BY action_id) -
                                 ROW_NUMBER() OVER (PARTITION BY player_id ORDER BY action_id) AS seq
@@ -26,18 +27,27 @@ WITH sequence_number AS (SELECT *,
 
      count_per_user AS (SELECT player_id, seq, COUNT(*) AS actions_count
                         FROM sequence_number
-                        GROUP BY player_id, seq)
+                        GROUP BY player_id, seq
+                        ORDER BY actions_count DESC
+                        limit 1)
+SELECT * FROM count_per_user;
 
-SELECT player_id
-FROM (SELECT player_id,
-             RANK() OVER (ORDER BY MAX(actions_count) DESC) AS rank
-      FROM count_per_user
-      GROUP BY player_id) AS ranked_players
-WHERE rank = 1;
+
+
+
+
+
+-- SELECT player_id
+-- FROM (SELECT player_id,
+--              RANK() OVER (ORDER BY MAX(actions_count) DESC) AS rank
+--       FROM count_per_user
+--       GROUP BY player_id) AS ranked_players
+-- WHERE rank = 1;
+
 
 -- Second approach- LAG() version:
 WITH lag_table AS (SELECT *,
-                          LAG(player_id, 1, 0) OVER (ORDER BY action_id) AS prev_player_id
+                          LAG(player_id, 1) OVER (ORDER BY action_id) AS prev_player_id
                    FROM player_actions),
 
      consecutive_actions AS (SELECT *,
@@ -48,6 +58,7 @@ WITH lag_table AS (SELECT *,
      final_TBL AS (SELECT *, RANK() OVER (PARTITION BY player_id, flag ORDER BY action_id) expected_result
                    FROM consecutive_actions
                    ORDER BY action_id)
+-- SELECT * FROM consecutive_actions;
 SELECT player_id, MAX(expected_result) as maximum_succesive
 FROM final_TBL
 GROUP BY player_id
